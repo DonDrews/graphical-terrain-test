@@ -3,11 +3,35 @@
 #include <time.h>
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <string>
 #include "mathfuncs.h"
+#include <pngwriter.h>
 
 using namespace std;
 
-const float START_HARMONIC = 0.4;
+const float START_HARMONIC = 0.25;
+
+void writeImage(float* data, int size)
+{
+  ofstream image;
+  image.open("testperlin.pgm");
+  //write header
+  image << "P2\n";
+  image << size << " " << size << "\n";
+  image << "255\n";
+
+  for(int i = 0; i < size; i++)
+  {
+    for(int j = 0; j < size; j++)
+    {
+      image << to_string(int(data[coord(i, j, size)] * 255)) + " ";
+    }
+    image << "\n";
+  }
+
+  image.close();
+}
 
 bool isValid(int x, int y, int size)
 {
@@ -122,9 +146,9 @@ void makeFractalArray(float* starting, int startSize, float* &finished, int fini
 
 int main()
 {
-  float start[] = {1, 1, 1, 1};
-  float temp = 0;
-  float* finished = &temp;
-  makeFractalArray(start, 2, finished, 5, 2);
-  printArray(finished, 5);
+  float start[] = {1, 0, 0, 1};
+  float finished[100][100];
+  bicubicInterpolate(&start[0], 2, &finished[0][0], 100);
+
+  writeImage(&finished[0][0], 100);
 }
