@@ -54,6 +54,7 @@ void printArray(float* matrix, int size)
     }
     std::cout << std::endl;
   }
+  std::cout << std::endl;
 }
 
 //returns p(x) where x is the normalized position between y1 and y2
@@ -117,16 +118,4 @@ void bicubicInterpolate(float* original, int originalSize, float* smoothed, int 
       smoothed[coord(x, y, size)] = cubicInterpolate((y * cF + 1) - yDown, interps[0], interps[1], interps[2], interps[3]);
     }
   }
-}
-
-//temporary
-int main()
-{
-  float org[3][3] = {2, 0, 3, 0, 1, 0, 0, 0, 1};
-  printArray(&org[0][0], 3);
-  std::cout << std::endl;
-  float parsed[9][9];
-  bicubicInterpolate(&org[0][0], 3, &parsed[0][0], 9);
-  printArray(&parsed[0][0], 9);
-  return 1;
 }

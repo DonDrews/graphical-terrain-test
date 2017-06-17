@@ -1,1 +1,1 @@
-cmd: g++ -std=c++11 mathfuncs.cpp && ./a.out
+cmd: g++ -ggdb -std=c++11 mathfuncs.cpp fractal.cpp && ./a.out
