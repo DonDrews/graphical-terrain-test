@@ -1,1 +1,1 @@
-cmd: g++ -ggdb -std=c++11 mathfuncs.cpp fractal.cpp -lpngwriter && ./a.out
+cmd: g++ -ggdb -std=c++11 mathfuncs.cpp fractal.cpp Erosion.cpp maingen.cpp && ./a.out

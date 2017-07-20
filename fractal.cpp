@@ -6,32 +6,10 @@
 #include <fstream>
 #include <string>
 #include "mathfuncs.h"
-#include <pngwriter.h>
 
 using namespace std;
 
-const float START_HARMONIC = 0.25;
-
-void writeImage(float* data, int size)
-{
-  ofstream image;
-  image.open("testperlin.pgm");
-  //write header
-  image << "P2\n";
-  image << size << " " << size << "\n";
-  image << "255\n";
-
-  for(int i = 0; i < size; i++)
-  {
-    for(int j = 0; j < size; j++)
-    {
-      image << to_string(int(data[coord(i, j, size)] * 255)) + " ";
-    }
-    image << "\n";
-  }
-
-  image.close();
-}
+const float START_HARMONIC = 0.5;
 
 bool isValid(int x, int y, int size)
 {
@@ -78,19 +56,19 @@ void makeFractalArray(float* starting, int startSize, float* &finished, int fini
           float average = (rands[0] + rands[1] + rands[2] + rands[3]) / 4;
 
           newArray[coord(x, y, newSize)] = average + randomRange(-harmonic, harmonic);
-          cout << randomRange(-harmonic, harmonic);
+          //cout << randomRange(-harmonic, harmonic);
 
-          cout << "Diamond: " << x << " " << y << endl;
+          //cout << "Diamond: " << x << " " << y << endl;
         }
         else if(!(x & 1) && !(y & 1)) //if x and y are both even, copy
         {
           newArray[coord(x, y, newSize)] = currentArray[coord(x / 2, y / 2, currentSize)];
-          cout << "Copy: " << x << " " << y << endl;
+          //cout << "Copy: " << x << " " << y << endl;
         }
       }
     }
 
-    printArray(newArray, newSize);
+    //printArray(newArray, newSize);
 
     //square step
     for(int y = 0; y < newSize; y++)
@@ -126,29 +104,20 @@ void makeFractalArray(float* starting, int startSize, float* &finished, int fini
 
           newArray[coord(x, y, newSize)] = (summation / amount) + randomRange(-harmonic, harmonic);
 
-          cout << "Square: " << x << " " << y << endl;
+          //cout << "Square: " << x << " " << y << endl;
         }
       }
     }
 
-    printArray(newArray, newSize);
+    //printArray(newArray, newSize);
 
     if(currentArray != starting)
     {
       delete[] currentArray;
     }
     currentArray = newArray;
-    harmonic /= 2;
+    harmonic *= 0.5;
   }
 
   finished = currentArray;
-}
-
-int main()
-{
-  float start[] = {1, 0, 0, 1};
-  float finished[100][100];
-  bicubicInterpolate(&start[0], 2, &finished[0][0], 100);
-
-  writeImage(&finished[0][0], 100);
 }

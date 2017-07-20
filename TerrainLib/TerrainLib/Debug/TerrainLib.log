@@ -1,0 +1,3 @@
+﻿  maingen.cpp
+c:\users\orion\desktop\tl\terrainlib\maingen.cpp(26): warning C4244: 'initializing': conversion from 'float' to 'unsigned short', possible loss of data
+c:\users\orion\desktop\tl\terrainlib\maingen.cpp(96): error C3861: 'erodeField': identifier not found

@@ -79,9 +79,9 @@ void bicubicInterpolate(float* original, int originalSize, float* smoothed, int 
   float cF = (float(originalSize) - 1) / (float(size) - 1);
 
   //make array with approximations
-  float adjusted[originalSize + 2][originalSize + 2];
-  adjustArray(&original[0], originalSize, &adjusted[0][0]);
-  printArray(&adjusted[0][0], originalSize + 2);
+  float* adjusted = new float[(originalSize + 2) * (originalSize + 2)];
+  adjustArray(&original[0], originalSize, &adjusted[0]);
+  //printArray(&adjusted[0], originalSize + 2);
 
   //iterate through each index on the scaled array
   for(int y = 0; y < size; y++)
@@ -105,10 +105,10 @@ void bicubicInterpolate(float* original, int originalSize, float* smoothed, int 
       for(int i = yDown - 1; i <= yDown + 2; i++)
       {
         float pVals[4];
-        pVals[0] = adjusted[i][xDown - 1];
-        pVals[1] = adjusted[i][xDown];
-        pVals[2] = adjusted[i][xDown + 1];
-        pVals[3] = adjusted[i][xDown + 2];
+        pVals[0] = adjusted[coord(xDown - 1, i, originalSize + 2)];
+        pVals[1] = adjusted[coord(xDown, i, originalSize + 2)];
+        pVals[2] = adjusted[coord(xDown + 1, i, originalSize + 2)];
+        pVals[3] = adjusted[coord(xDown + 2, i, originalSize + 2)];
 
         interps[index] = cubicInterpolate((x * cF + 1) - xDown, pVals[0], pVals[1], pVals[2], pVals[3]);
         ++index;
