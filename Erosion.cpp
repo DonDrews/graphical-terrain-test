@@ -6,17 +6,18 @@
 #include "mathfuncs.h"
 #include "Erosion.h"
 
-const int ITERATIONS = 50;
-const float TIME_STEP = 0.0001;
-const float RAINDROP_SIZE = 0.05;
+const int ITERATIONS = 200;
+const float TIME_STEP = 0.01;
+const float RAINDROP_SIZE = 0.01;
+const float RAIN_PROB = 0.05;
 const float PIPE_CROSS_SECTION = 0.1;
 const float GRAVITY = 0.1;
-const float PIPE_LENGTH = 0.2;
-const float TILT_MIN = 0.001;
-const float SEDIMENT_CAP = 0.001;
-const float DISSOLVE_COEFF = 0.1;
-const float DEP_COEFF = 0.1;
-const float EVAP_COEFF = 0.1;
+const float PIPE_LENGTH = 0.001;
+const float TILT_MIN = 0.005;
+const float SEDIMENT_CAP = 0.5;
+const float DISSOLVE_COEFF = 0.002;
+const float DEP_COEFF = 0.002;
+const float EVAP_COEFF = 0.02;
 
 struct Crd
 {
@@ -27,10 +28,65 @@ struct Crd
   int y;
 };
 
+struct Cell
+{
+  float b;
+  float b1;
+  float prevD;
+  float d;
+  float d1;
+  float d2;
+  float s;
+  float s1;
+  float f[4];
+  float u;
+  float v;
+};
+
 const int LEFT = 0;
 const int RIGHT = 1;
 const int TOP = 2;
 const int BOTTOM = 3;
+
+void checkStability(Cell& c)
+{
+  bool unDef = false;
+
+  unDef = (unDef || std::isnan(c.b) || std::isinf(c.b));
+  unDef = (unDef || std::isnan(c.prevD) || std::isinf(c.prevD));
+  unDef = (unDef || std::isnan(c.d) || std::isinf(c.d));
+  unDef = (unDef || std::isnan(c.s) || std::isinf(c.s));
+  unDef = (unDef || std::isnan(c.f[0]) || std::isinf(c.f[0]));
+  unDef = (unDef || std::isnan(c.f[1]) || std::isinf(c.f[1]));
+  unDef = (unDef || std::isnan(c.f[2]) || std::isinf(c.f[2]));
+  unDef = (unDef || std::isnan(c.f[3]) || std::isinf(c.f[3]));
+  unDef = (unDef || std::isnan(c.u) || std::isinf(c.u));
+  unDef = (unDef || std::isnan(c.v) || std::isinf(c.v));
+  unDef = (unDef || abs(c.f[0]) > 10000);
+  unDef = (unDef || abs(c.f[1]) > 10000);
+  unDef = (unDef || abs(c.f[2]) > 10000);
+  unDef = (unDef || abs(c.f[3]) > 10000);
+  unDef = (unDef || c.d < 0.0);
+  unDef = (unDef || c.b < -1);
+
+  if(unDef)
+  {
+    std::cout << "Listing Diagnostic:" << std::endl;
+    std::cout << c.b << std::endl;
+    std::cout << c.d1 << std::endl;
+    std::cout << c.d2 << std::endl;
+    std::cout << c.d << std::endl;
+    std::cout << c.s << std::endl;
+    std::cout << c.f[0] << std::endl;
+    std::cout << c.f[1] << std::endl;
+    std::cout << c.f[2] << std::endl;
+    std::cout << c.f[3] << std::endl;
+    std::cout << c.u << std::endl;
+    std::cout << c.v << std::endl;
+
+    exit(-1);
+  }
+}
 
 Crd getCoordAtDir(Crd c, int dir, int size, bool& isNull)
 {
@@ -76,23 +132,16 @@ float getInterpValue(float ll, float lr, float ul, float ur, float x, float y)
   return y * (uLerp - lLerp) + lLerp;
 }
 
-struct Cell
-{
-  float b;
-  float prevD;
-  float d;
-  float s;
-  float f[4];
-  float u;
-  float v;
-};
-
 float* erodeField(float* field, int size)
 {
   Cell defaultCell;
   defaultCell.b = 0.0f;
+  defaultCell.b1 = 0.0f;
   defaultCell.d = 0.0f;
+  defaultCell.d1 = 0.0f;
+  defaultCell.d2 = 0.0f;
   defaultCell.s = 0.0f;
+  defaultCell.s1 = 0.0f;
   defaultCell.f[0] = {0.0f};
   defaultCell.f[1] = { 0.0f };
   defaultCell.f[2] = { 0.0f };
@@ -118,7 +167,20 @@ float* erodeField(float* field, int size)
     std::cout << "Iteration " << i << std::endl;
 
     //Step 1: Add water through rainfall
-    sim[rand() % size][rand() % size].d += RAINDROP_SIZE;
+    for(int x = 0; x < size; x++)
+    {
+      for(int y = 0; y < size; y++)
+      {
+        if(rand() % int(size * size * RAIN_PROB) == 0)
+        {
+          sim[x][y].d1 = sim[x][y].d + RAINDROP_SIZE;
+        }
+        else
+        {
+          sim[x][y].d1 = sim[x][y].d;
+        }
+      }
+    }
 
     //Step 2: Calculate movement of water
     for(int x = 0; x < size; x++)
@@ -136,10 +198,10 @@ float* erodeField(float* field, int size)
           if(!n)
           {
             //calculate height difference (including water)
-            float deltaHeight = (sim[x][y].b + sim[x][y].d) - (sim[side.x][side.y].b + sim[side.x][side.y].d);
+            float deltaHeight = (sim[x][y].b + sim[x][y].d1) - (sim[side.x][side.y].b + sim[side.x][side.y].d1);
 
             //find new flux value for direction
-            sim[x][y].f[j] = std::max(0.0f, sim[x][y].f[j] + (TIME_STEP * PIPE_CROSS_SECTION * GRAVITY) / PIPE_LENGTH);
+            sim[x][y].f[j] = std::max(0.0f, sim[x][y].f[j] + (TIME_STEP * PIPE_CROSS_SECTION * GRAVITY * deltaHeight) / PIPE_LENGTH);
           }
           else
           {
@@ -149,7 +211,14 @@ float* erodeField(float* field, int size)
           fluxSum += sim[x][y].f[j];
         }
 
-        float scalingFactor = std::min(1.0f, (sim[x][y].d * PIPE_LENGTH * PIPE_LENGTH) / (fluxSum * TIME_STEP));
+        float scalingFactor = 1.0f;
+        if(fluxSum > 0.000001)
+          scalingFactor = (PIPE_LENGTH * PIPE_LENGTH) / (fluxSum * TIME_STEP);
+
+        if(sim[x][y].d1 < 0.00000001)
+          scalingFactor = 0.0f;
+        else
+          scalingFactor = std::min(1.0f, scalingFactor * sim[x][y].d1);
 
         //for each direction
         for(int j = 0; j < 4; j++)
@@ -157,6 +226,8 @@ float* erodeField(float* field, int size)
           //adjust based on scaling factor
           sim[x][y].f[j] *= scalingFactor;
         }
+
+        checkStability(sim[x][y]);
       }
     }
 
@@ -179,10 +250,13 @@ float* erodeField(float* field, int size)
             totalDelta -= sim[x][y].f[j];
           }
         }
-        //save previous water height for velocity calcs
-        sim[x][y].prevD = sim[x][y].d;
 
-        sim[x][y].d += totalDelta / (PIPE_LENGTH * PIPE_LENGTH);
+        sim[x][y].d2 = sim[x][y].d1 + ((TIME_STEP * totalDelta) / (PIPE_LENGTH * PIPE_LENGTH));
+
+        if(sim[x][y].d2 < 0.000001)
+          sim[x][y].d2 = 0.0;
+
+        checkStability(sim[x][y]);
       }
     }
 
@@ -191,7 +265,7 @@ float* erodeField(float* field, int size)
     {
       for(int y = 0; y < size; y++)
       {
-        float avgWater = (sim[x][y].d + sim[x][y].prevD) / 2.0f;
+        float avgWater = (sim[x][y].d2 + sim[x][y].d1) / 2.0f;
 
         //horizontal side
         float lContrib = 0.0;
@@ -210,10 +284,14 @@ float* erodeField(float* field, int size)
           rContrib = sim[x][y].f[RIGHT] - sim[rSide.x][rSide.y].f[LEFT];
         }
 
-        if(avgWater != 0.0)
+        if(avgWater > 0.0000001)
+        {
           sim[x][y].u = ((lContrib + rContrib) / 2.0) / (avgWater * PIPE_LENGTH);
+        }
         else
+        {
           sim[x][y].u = 0.0;
+        }
 
         //vertical side
         float bContrib = 0.0;
@@ -232,10 +310,12 @@ float* erodeField(float* field, int size)
           tContrib = sim[x][y].f[TOP] - sim[tSide.x][tSide.y].f[BOTTOM];
         }
 
-        if(avgWater != 0.0)
+        if(avgWater > 0.0000001)
           sim[x][y].v = ((bContrib + tContrib) / 2.0) / (avgWater * PIPE_LENGTH);
         else
           sim[x][y].v = 0.0;
+
+        checkStability(sim[x][y]);
       }
     }
 
@@ -293,8 +373,8 @@ float* erodeField(float* field, int size)
           vHeightDelta *= 2;
 
         //find normal (and normalize)
-        float normal[3] = {hHeightDelta, 2.0, vHeightDelta};
-        float magnitude = pow(normal[0], 2) + pow(normal[1], 2) + pow(normal[2], 2);
+        float normal[3] = {hHeightDelta, PIPE_LENGTH, vHeightDelta};
+        float magnitude = sqrt(pow(normal[0], 2) + pow(normal[1], 2) + pow(normal[2], 2));
         normal[0] /= magnitude;
         normal[1] /= magnitude;
         normal[2] /= magnitude;
@@ -308,19 +388,21 @@ float* erodeField(float* field, int size)
         if(transCapacity > sim[x][y].s)
         {
           //erode
-			float sedChange = DISSOLVE_COEFF * (transCapacity - sim[x][y].s);
+			    float sedChange = DISSOLVE_COEFF * (transCapacity - sim[x][y].s);
 
-          sim[x][y].b -= sedChange;
-          sim[x][y].s += sedChange;
+          sim[x][y].b1 = sim[x][y].b - sedChange;
+          sim[x][y].s1 = sim[x][y].s + sedChange;
         }
         else
         {
           //deposit
           float sedChange = DEP_COEFF * (sim[x][y].s - transCapacity);
 
-          sim[x][y].b += sedChange;
-          sim[x][y].s -= sedChange;
+          sim[x][y].b1 = sim[x][y].b + sedChange;
+          sim[x][y].s1 = sim[x][y].s - sedChange;
         }
+
+        checkStability(sim[x][y]);
       }
     }
 
@@ -331,14 +413,16 @@ float* erodeField(float* field, int size)
       {
         float xSed = x - (sim[x][y].u * TIME_STEP);
         float ySed = y - (sim[x][y].v * TIME_STEP);
+        int xDown = floor(xSed);
+        int yDown = floor(ySed);
 
-        if(xSed >= size - 1 || xSed < 0 || ySed >= size - 1 || ySed < 0)
+        if(xDown >= size - 1 || xDown < 0 || yDown >= size - 1 || yDown < 0)
         {
           //do not move sediment
         }
         else
         {
-          sim[x][y].s = getInterpValue(sim[xSed][ySed].s, sim[xSed + 1][ySed].s, sim[xSed][ySed + 1].s, sim[xSed + 1][ySed + 1].s, xSed - floor(xSed), ySed - floor(ySed));
+          sim[x][y].s = getInterpValue(sim[xDown][yDown].s1, sim[xDown + 1][yDown].s1, sim[xDown][yDown + 1].s1, sim[xDown + 1][yDown + 1].s1, xSed - xDown, ySed - yDown);
         }
       }
     }
@@ -349,6 +433,16 @@ float* erodeField(float* field, int size)
       for(int y = 0; y < size; y++)
       {
         sim[x][y].d *= 1 - (EVAP_COEFF * TIME_STEP);
+      }
+    }
+
+    //Step 8: Move all changes back to center
+    for(int x = 0; x < size; x++)
+    {
+      for(int y = 0; y < size; y++)
+      {
+        sim[x][y].b = sim[x][y].b1;
+        sim[x][y].d = sim[x][y].d2;
       }
     }
   }

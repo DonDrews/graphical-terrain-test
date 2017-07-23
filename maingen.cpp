@@ -11,10 +11,10 @@
 
 using namespace std;
 
-void writeImage(float* data, int size)
+void writeImage(string name, float* data, int size)
 {
   ofstream image;
-  image.open("bigfinal.ppm");
+  image.open(name);
   //write header
   image << "P3\n";
   image << size << " " << size << "\n";
@@ -24,6 +24,7 @@ void writeImage(float* data, int size)
   {
     for(int j = 0; j < size; j++)
     {
+      /*
       unsigned short color = data[coord(i, j, size)] * 65535;
       if(color < 0)
         color = 0;
@@ -34,6 +35,14 @@ void writeImage(float* data, int size)
       unsigned char lsb = (color >> 8) & 0xFF;
 
       image << to_string(lsb) + " " + to_string(msb) + " " + to_string(0) + "  ";
+      */
+      unsigned short color = data[coord(i, j, size)] * 255;
+      if(color < 0)
+        color = 0;
+      if(color > 255)
+        color = 255;
+
+      image << to_string(color) << " " << to_string(color) << " " << to_string(color) << " ";
     }
     image << "\n";
   }
@@ -86,7 +95,7 @@ int main()
 
   for(int i = 0; i < 2 * 2; i++)
   {
-    startFractal[i] = randomRange(0.0, 1.0);
+    startFractal[i] = randomRange(0.5, 0.7);
   }
 
   float temp = 0;
@@ -94,7 +103,9 @@ int main()
 
   makeFractalArray(&startFractal[0], 2, finishedFractal, SIZE, 9);
 
+  writeImage("preerode.ppm", &finishedFractal[0], SIZE);
+
   float* eroded = erodeField(&finishedFractal[0], SIZE);
 
-  writeImage(&eroded[0], SIZE);
+  writeImage("bigfinal.ppm", &eroded[0], SIZE);
 }
