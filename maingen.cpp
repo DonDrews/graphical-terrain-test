@@ -24,7 +24,6 @@ void writeImage(string name, float* data, int size)
   {
     for(int j = 0; j < size; j++)
     {
-      /*
       unsigned short color = data[coord(i, j, size)] * 65535;
       if(color < 0)
         color = 0;
@@ -35,14 +34,36 @@ void writeImage(string name, float* data, int size)
       unsigned char lsb = (color >> 8) & 0xFF;
 
       image << to_string(lsb) + " " + to_string(msb) + " " + to_string(0) + "  ";
-      */
-      unsigned short color = data[coord(i, j, size)] * 255;
+    }
+    image << "\n";
+  }
+
+  image.close();
+}
+
+void writeSplat()
+{
+  ofstream image;
+  image.open(name);
+  //write header
+  image << "P3\n";
+  image << size << " " << size << "\n";
+  image << "255\n";
+
+  for(int i = 0; i < size; i++)
+  {
+    for(int j = 0; j < size; j++)
+    {
+      unsigned short color = data[coord(i, j, size)] * 65535;
       if(color < 0)
         color = 0;
-      if(color > 255)
-        color = 255;
+      if(color > 65535)
+        color = 65535;
 
-      image << to_string(color) << " " << to_string(color) << " " << to_string(color) << " ";
+      unsigned char msb = color & 0xFF;
+      unsigned char lsb = (color >> 8) & 0xFF;
+
+      image << to_string(lsb) + " " + to_string(msb) + " " + to_string(0) + "  ";
     }
     image << "\n";
   }
@@ -52,7 +73,7 @@ void writeImage(string name, float* data, int size)
 
 int main()
 {
-  const int SIZE = 513;
+  const int SIZE = 8193;
 
 /*
 
@@ -101,11 +122,9 @@ int main()
   float temp = 0;
   float* finishedFractal = &temp;
 
-  makeFractalArray(&startFractal[0], 2, finishedFractal, SIZE, 9);
+  makeFractalArray(&startFractal[0], 2, finishedFractal, SIZE, 13);
 
-  writeImage("preerode.ppm", &finishedFractal[0], SIZE);
+  //writeImage("preerode.ppm", &finishedFractal[0], SIZE);
 
-  float* eroded = erodeField(&finishedFractal[0], SIZE);
-
-  writeImage("bigfinal.ppm", &eroded[0], SIZE);
+  writeImage("bigfinal.ppm", &finishedFractal[0], SIZE);
 }

@@ -1,3 +1,3 @@
 #pragma once
 
-float* erodeField(float* field, int size);
+float* erodeField(float* field, float*& water, int size);

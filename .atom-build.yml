@@ -1,1 +1,1 @@
-cmd: g++ -ggdb -std=c++11 mathfuncs.cpp fractal.cpp Erosion.cpp maingen.cpp && ./a.out
+cmd: g++ -O3 -std=c++11 mathfuncs.cpp fractal.cpp Erosion.cpp maingen.cpp && ./a.out

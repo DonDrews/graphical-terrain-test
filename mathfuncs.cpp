@@ -7,6 +7,64 @@ int coord(int x, int y, int size)
   return x + (y * size);
 }
 
+float* genSplat(float* map, int size)
+{
+  //horizontal side
+  float hHeightDelta = 0.0;
+  int index = 0;
+  bool l;
+  Crd lSide = getCoordAtDir(Crd(x, y), LEFT, size, l);
+  if(!l)
+  {
+    hHeightDelta += sim[x][y].b - sim[lSide.x][lSide.y].b;
+    ++index;
+  }
+
+  bool r;
+  Crd rSide = getCoordAtDir(Crd(x, y), RIGHT, size, r);
+  if(!r)
+  {
+    hHeightDelta += sim[rSide.x][rSide.y].b - sim[x][y].b;
+    ++index;
+  }
+
+  //adjust for boundary condition
+  if(index != 2)
+    hHeightDelta *= 2;
+
+  //vertical side
+  float vHeightDelta = 0.0;
+  index = 0;
+  bool b;
+  Crd bSide = getCoordAtDir(Crd(x, y), BOTTOM, size, b);
+  if(!b)
+  {
+    vHeightDelta += sim[x][y].b - sim[bSide.x][bSide.y].b;
+    ++index;
+  }
+
+  bool t;
+  Crd tSide = getCoordAtDir(Crd(x, y), TOP, size, t);
+  if(!t)
+  {
+    vHeightDelta += sim[tSide.x][tSide.y].b - sim[x][y].b;
+    ++index;
+  }
+
+  //adjust for boundary condition
+  if(index != 2)
+    vHeightDelta *= 2;
+
+  //find normal (and normalize)
+  float normal[3] = {hHeightDelta, PIPE_LENGTH, vHeightDelta};
+  float magnitude = sqrt(pow(normal[0], 2) + pow(normal[1], 2) + pow(normal[2], 2));
+  normal[0] /= magnitude;
+  normal[1] /= magnitude;
+  normal[2] /= magnitude;
+
+  float sinOfAngle = std::max(TILT_MIN, float(sqrt(1.0 - pow(normal[1], 2))));
+}
+
 //helper function to bicubicInterpolate()
 //makes a new array with a 1 unit border of approximated outside values
 void adjustArray(float* graph, int size, float* newArray)
